@@ -1,0 +1,55 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: dark; }
+  body { width: 420px; margin: 0; background: #14161c; color: #e6e8ee;
+         font: 13px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+           border-bottom: 1px solid #262a34; }
+  header b { font-size: 13px; }
+  header .sp { flex: 1 }
+  button { background: #232735; color: #e6e8ee; border: 1px solid #323848;
+           border-radius: 8px; padding: 5px 10px; cursor: pointer; font: inherit; }
+  button:hover { background: #2b3040; }
+  button.primary { background: #3457d5; border-color: #3457d5; }
+  /* «Убрать» — действие необратимое, но не главное: приглушено, красным становится
+     только под курсором, чтобы его не жали вместо «Создать заявку». */
+  button.rm { color: #9aa3b5; }
+  button.rm:hover { background: #3a1f24; border-color: #6b2c34; color: #ffb1b1; }
+  .item { padding: 10px 12px; border-bottom: 1px solid #20242e; }
+  .item .row { display: flex; gap: 8px; align-items: baseline; }
+  .dir { font-weight: 700; text-transform: uppercase; font-size: 11px;
+         padding: 1px 7px; border-radius: 99px; background: #26314f; color: #9db4ff; }
+  .city { font-weight: 600 }
+  .phone { color: #9aa3b5; margin-left: auto; font-variant-numeric: tabular-nums; }
+  .prob { color: #b8bfcd; margin-top: 4px; white-space: nowrap; overflow: hidden;
+          text-overflow: ellipsis; }
+  .meta { color: #7d8698; font-size: 11px; margin-top: 3px; }
+  .empty { padding: 28px 14px; text-align: center; color: #7d8698; }
+  .err { padding: 8px 12px; background: #3a1f24; color: #ffb1b1; font-size: 12px; }
+  .tab { flex: 1; border: 0; border-radius: 0; background: transparent; color: #7d8698;
+         padding: 8px; border-bottom: 2px solid transparent; }
+  .tab.active { color: #e6e8ee; border-bottom-color: #3457d5; }
+  .h-item { padding: 8px 12px; border-bottom: 1px solid #20242e; font-size: 12px; }
+  .h-ok { color: #86efac; } .h-bad { color: #ffb1b1; } .h-skip { color: #eab308; }
+  .h-why { color: #b8bfcd; margin-top: 2px; }
+  .h-meta { color: #7d8698; font-size: 11px; margin-top: 2px; }
+  footer { padding: 8px 12px; display: flex; gap: 8px; align-items: center;
+           color: #7d8698; font-size: 11px; }
+</style>
+<header>
+  <b>Очередь заявок</b><span class="sp"></span>
+  <button id="follow" title="Открыть вкладку диалога, который сейчас ведёт бот">👁 Бот</button>
+  <button id="all" class="primary">Создать все</button>
+  <button id="refresh" title="Опросить бота сейчас">⟳</button>
+  <button id="opts" title="Настройки">⚙</button>
+</header>
+<nav style="display:flex;border-bottom:1px solid #262a34">
+  <button id="tab-queue" class="tab active">Очередь</button>
+  <button id="tab-hist" class="tab">История</button>
+</nav>
+<div id="error"></div>
+<div id="list"></div>
+<div id="hist" style="display:none"></div>
+<footer><span id="status"></span></footer>
+<script src="popup.js"></script>

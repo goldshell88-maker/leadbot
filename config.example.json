@@ -1,0 +1,27 @@
+{
+  "gateway_base": "https://claude-gateway.ru/api",
+  "auth_token": "PASTE-YOUR-agw-TOKEN-HERE",
+  "model": "claude-sonnet-5",
+  "max_tokens": 1024,
+  "host": "127.0.0.1",
+  "port": 8788,
+  "default_category": "unknown",
+  "cache_ttl": "auto",
+  "crm": {
+    "autocreate": "off",
+    "systems": {
+      "kp": {
+        "login": "",
+        "password": ""
+      },
+      "bt": {
+        "login": "",
+        "password": ""
+      },
+      "mnc": {
+        "login": "",
+        "password": ""
+      }
+    }
+  }
+}

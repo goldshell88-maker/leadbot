@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Лид-бот — окно оператора</title>
+<style>
+  :root { --bg:#0f1216; --panel:#171c22; --panel2:#1d242c; --line:#262d36; --text:#e6eaef;
+          --muted:#8b96a3; --cl:#232b34; --op:#2b6cb0; --bot:#2f7d5b; --warn:#c9932b; --live:#e0533d; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:13.5px/1.45 system-ui,Segoe UI,Arial; background:var(--bg); color:var(--text);
+         display:grid; grid-template-columns:330px 1fr; height:100vh; }
+  .col { display:flex; flex-direction:column; min-height:0; }
+  header { padding:9px 12px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:center; }
+  header b { font-size:14px; } .sp { flex:1; }
+  .muted { color:var(--muted); } .mini { font-size:11px; }
+  button { padding:7px 11px; border:0; border-radius:8px; background:var(--op); color:#fff; cursor:pointer; font-size:12.5px; }
+  button.ghost { background:var(--panel2); border:1px solid var(--line); color:var(--text); }
+  button:disabled { opacity:.5; cursor:default; }
+
+  /* список */
+  #list { overflow-y:auto; flex:1; }
+  .it { padding:9px 12px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .it:hover { background:var(--panel); } .it.sel { background:var(--panel2); border-left:3px solid var(--op); }
+  .it .top { display:flex; gap:6px; align-items:center; }
+  .it .nm { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .it .pv { color:var(--muted); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tag { font-size:10px; padding:1px 6px; border-radius:10px; background:#33404d; color:#cdd6df; }
+  .tag.av { background:#3a2f14; color:#e6c07b; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--live); flex:0 0 auto; box-shadow:0 0 0 3px rgba(224,83,61,.2); }
+  .tag.fin { background:#22303a; color:#8fb2c9; }
+
+  /* переписка */
+  #right { border-left:1px solid var(--line); }
+  #rhead { padding:10px 14px; border-bottom:1px solid var(--line); }
+  #rhead .t { font-weight:600; } #rhead .s { color:var(--muted); margin-top:2px; }
+  #thread { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:8px; }
+  .msg { max-width:76%; padding:7px 11px; border-radius:11px; white-space:pre-wrap; word-wrap:break-word; }
+  .client { align-self:flex-start; background:var(--cl); border-bottom-left-radius:3px; }
+  .operator { align-self:flex-end; background:var(--op); border-bottom-right-radius:3px; }
+  .msg .who { font-size:10px; opacity:.7; margin-bottom:2px; }
+
+  /* нижняя панель действий */
+  #act { border-top:1px solid var(--line); padding:12px 14px; background:var(--panel); }
+  #act .row { display:flex; gap:8px; margin-bottom:10px; }
+  .draft { background:var(--panel2); border:1px solid var(--line); border-left:3px solid var(--bot); border-radius:8px; padding:10px 12px; }
+  .draft .lbl { color:var(--bot); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; }
+  .draft .txt { margin-top:6px; }
+  .chips { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { font-size:11px; padding:2px 8px; border-radius:10px; background:#26303a; color:#bcd; }
+  .chip.on { background:rgba(47,125,91,.2); color:#8fe0b6; }
+  .err { color:var(--warn); }
+  /* разбор */
+  #cmp { display:none; padding:12px 14px; border-top:1px solid var(--line); overflow-y:auto; max-height:46vh; }
+  .pair { border:1px solid var(--line); border-radius:8px; margin-bottom:10px; overflow:hidden; }
+  .pair .cl { background:var(--cl); padding:7px 10px; }
+  .pair .cols { display:grid; grid-template-columns:1fr 1fr; }
+  .pair .op { padding:7px 10px; border-right:1px solid var(--line); }
+  .pair .bt { padding:7px 10px; background:rgba(47,125,91,.08); }
+  .pair .h { font-size:10px; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
+  .empty { padding:30px; text-align:center; color:var(--muted); }
+</style>
+</head>
+<body>
+  <div class="col">
+    <header>
+      <b>Входящие</b>
+      <span class="mini muted" id="cnt"></span>
+      <span class="sp"></span>
+      <button class="ghost mini" id="refresh">↻</button>
+    </header>
+    <div id="list"><div class="empty">Загрузка…</div></div>
+  </div>
+
+  <div class="col" id="right">
+    <div id="rhead"><div class="t">Выберите диалог слева</div>
+      <div class="s mini">Слева — реальные чаты из Jivo. Живые (активные) — сверху с красной точкой.</div></div>
+    <div id="thread"></div>
+    <div id="act" style="display:none">
+      <div class="row">
+        <button id="btnSuggest">💬 Что бы ответил бот</button>
+        <button class="ghost" id="btnCompare">📊 Разбор: оператор vs бот</button>
+        <span class="sp"></span>
+        <span class="mini muted" id="model"></span>
+      </div>
+      <div id="draftBox"></div>
+    </div>
+    <div id="cmp"></div>
+  </div>
+
+<script>
+const SRC = {avito:['av','avito','tag av'], jivo:['jivo','','tag']};
+let dialogs = [], selKey = null, curMsgs = [], listSig = '';
+
+const $ = s => document.querySelector(s);
+function esc(t){ const d=document.createElement('div'); d.textContent=t||''; return d.innerHTML; }
+
+async function loadList(){
+  try{
+    const r = await fetch('/api/live'); const j = await r.json();
+    dialogs = j.dialogs || [];
+    $('#cnt').textContent = dialogs.length + ' диалогов' + (j.error? ' · ошибка чтения':'');
+    // перерисовываем список только когда данные реально изменились — иначе не трогаем DOM
+    const sig = dialogs.map(d=>d.key+':'+(d.updated||'')+':'+(d.n||0)+':'+(d.status||'')).join('|') + '#' + selKey;
+    if(sig !== listSig){ listSig = sig; renderList(); }
+  }catch(e){ $('#list').innerHTML = '<div class="empty err">Нет связи с сервисом бота.<br>Запусти Start-bot.bat</div>'; }
+}
+function renderList(){
+  if(!dialogs.length){ $('#list').innerHTML='<div class="empty">Пока нет диалогов.<br>Когда клиент напишет в Jivo — появится здесь.</div>'; return; }
+  $('#list').innerHTML = dialogs.map(d=>{
+    const av = d.source==='avito';
+    const live = d.status==='open';
+    const nm = esc(d.visitor||d.title||d.key);
+    return `<div class="it ${d.key===selKey?'sel':''}" data-k="${esc(d.key)}">
+      <div class="top">${live?'<span class="dot"></span>':''}
+        <span class="tag ${av?'av':''}">${av?'Avito':'Jivo'}</span>
+        <span class="tag ${live?'':'fin'}">${live?'живой':'завершён'}</span>
+        ${d.city?'<span class="tag">'+esc(d.city)+'</span>':''}
+        ${d.flag?'<span class="tag" style="background:#4a2020;color:#eaa">'+(d.flag.kind==='refuse'?'ОТКАЗ':'СЛИВ')+'</span>':''}
+        <span class="nm">${nm}</span></div>
+      <div class="pv mini">${esc(d.preview||'')}</div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.it').forEach(el=>el.onclick=()=>selectDialog(el.dataset.k));
+}
+
+async function selectDialog(key){
+  selKey = key; renderList();
+  $('#cmp').style.display='none'; $('#draftBox').innerHTML=''; $('#model').textContent='';
+  const r = await fetch('/api/live/dialog?key='+encodeURIComponent(key));
+  const d = await r.json(); curMsgs = d.messages||[];
+  $('#rhead').innerHTML = `<div class="t">${esc(d.visitor||d.key)} ${d.status==='open'?'<span class=dot></span>':''}</div>
+    <div class="s mini">${d.city?'📍 '+esc(d.city)+' · ':''}${esc(d.title||'')} · ${d.n||0} сообщ · ${d.source==='avito'?'Avito':'Jivo'}${d.agents&&d.agents.length?' · оператор '+esc(d.agents.join(', ')):''}</div>`;
+  $('#thread').innerHTML = curMsgs.map(m=>`<div class="msg ${m.role}"><div class="who">${m.role==='client'?'Клиент':'Оператор'}${m.time?' · '+esc(m.time):''}</div>${esc(m.text)}</div>`).join('');
+  $('#act').style.display='block';
+  $('#thread').scrollTop = $('#thread').scrollHeight;
+}
+
+function chip(label,val){ return val? `<span class="chip">${label}: ${esc(val)}</span>`:''; }
+
+async function suggest(force){
+  const box=$('#draftBox'); box.innerHTML='<div class="draft muted">Думаю…</div>';
+  try{
+    const r = await fetch('/api/suggest',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key:selKey, force:!!force})});
+    const j = await r.json();
+    if(!r.ok){ box.innerHTML=`<div class="draft err">⚠ ${esc(j.error||'ошибка')}${(j.error||'').includes('402')||(j.error||'').toLowerCase().includes('credit')?'<br>Пополни баланс на claude-gateway.ru':''}</div>`; return; }
+    if(j.deflect){
+      box.innerHTML = `<div class="draft" style="border-left-color:var(--live)">
+        <div class="lbl" style="color:var(--live)">⚑ ${j.flag.kind==='refuse'?'ОТКАЗ':'СЛИВ'} — ${esc(j.flag.reason)} · 0 токенов</div>
+        <div class="txt">${esc(j.reply)}</div>
+        <div class="chips"><button class="ghost" id="forceBot">Всё равно ответить ботом</button></div>
+      </div>`;
+      $('#forceBot').onclick=()=>suggest(true);
+      $('#model').textContent='локальный фильтр (без API)';
+      return;
+    }
+    const st=j.state||{};
+    box.innerHTML = `<div class="draft">
+      <div class="lbl">Черновик ответа бота${j.waiting_client?' (клиент молчит — как вернуть)':''}</div>
+      <div class="txt">${esc(j.reply)}</div>
+      <div class="chips">
+        <span class="chip">${({bt:'БТ',kp:'КП',mnc:'МНЧ',unknown:'напр.?'})[j.category]||j.category}</span>
+        ${chip('тел',st.phone)}${chip('адрес',st.address)}${chip('время',st.preferred_time)}
+        <span class="chip ${j.ready?'on':''}">${j.ready?'✓ можно оформлять':'данные не собраны'}</span>
+        ${j.handoff?'<span class="chip">⚑ передать человеку</span>':''}
+      </div></div>`;
+    $('#model').textContent = 'модель: '+(j.model||'').replace('claude-','');
+  }catch(e){ box.innerHTML='<div class="draft err">⚠ нет связи</div>'; }
+}
+
+async function compare(){
+  const c=$('#cmp'); c.style.display='block'; c.innerHTML='<div class="muted">Считаю разбор по ходам…</div>';
+  try{
+    const r = await fetch('/api/compare',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key:selKey})});
+    const j = await r.json();
+    if(!r.ok){ c.innerHTML=`<div class="err">⚠ ${esc(j.error||'ошибка')}</div>`; return; }
+    if(!j.pairs||!j.pairs.length){ c.innerHTML='<div class="muted">Нет ходов клиента для разбора.</div>'; return; }
+    c.innerHTML = '<div class="mini muted" style="margin-bottom:8px">Сравнение по каждому обращению клиента: как ответил живой оператор и как предложил бы бот.</div>'+
+      j.pairs.map(p=>`<div class="pair">
+        <div class="cl"><div class="h">Клиент</div>${esc(p.client)}</div>
+        <div class="cols">
+          <div class="op"><div class="h">Оператор ответил</div>${esc(p.operator)||'<span class=muted>—</span>'}</div>
+          <div class="bt"><div class="h">Бот предложил бы</div>${esc(p.bot)}</div>
+        </div></div>`).join('');
+  }catch(e){ c.innerHTML='<div class="err">⚠ нет связи</div>'; }
+}
+
+$('#btnSuggest').onclick=suggest;
+$('#btnCompare').onclick=compare;
+$('#refresh').onclick=loadList;
+loadList();
+setInterval(loadList, 8000);
+</script>
+</body>
+</html>

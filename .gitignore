@@ -1,0 +1,50 @@
+
+# карта зависимостей (graphify) — вне git: пересобирается из кода
+# локальные данные/кэши (наполняются работой, содержат ПД клиентов)
+# мусор
+# программа обучения: корпус, выгрузки, сырые диалоги — в git не место
+# секреты — в репозиторий не попадают никогда
+# черновики мутационного прогона: пересобираются инструментом
+*.bak*
+*.log
+*.pyc
+.мутация-кэш
+.мутация/
+__pycache__/
+analysis/LEARNING/
+analysis/LEARNING/немые-*.log
+analysis/_eval_cache.jsonl
+analysis/_train_cache.jsonl
+analysis/_train_live.jsonl
+analysis/answer_cache.jsonl
+analysis/cost_log.jsonl
+analysis/funnel_log.jsonl
+config.json
+data/ad_registry.json
+data/avito_accounts.json
+data/channel_state.json
+data/city_overrides.json
+data/geocode_cache.json
+data/multi_account.json
+graphify-out/
+nohup.out
+
+# теневой журнал наблюдения: тексты живых диалогов, ПД клиентов
+data/shadow.jsonl
+data/shadow.jsonl.1
+data/replay_cache.jsonl
+data/self_train_cache.jsonl
+# эталон: замороженные выборки и кассета держат СЫРЫЕ реплики клиентов — в git не место.
+# Собираются заново: benchmark.py --выборка N, затем --записать.
+# А вот analysis/BENCHMARK/цена_хода.json и история.jsonl остаются: там только числа.
+analysis/BENCHMARK/выборка.jsonl
+analysis/BENCHMARK/контроль.jsonl
+analysis/BENCHMARK/кассета.json
+analysis/BENCHMARK/последний.json
+analysis/LEARNING/avito.jsonl
+analysis/LEARNING/avito_corpus.jsonl
+analysis/RAZBOR/
+data/vision_corpus.jsonl
+data/crm_queue.jsonl
+analysis/test_vision.json
+analysis/test_vision.md

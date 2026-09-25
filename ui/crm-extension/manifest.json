@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Лид-бот → Заявки",
+  "version": "1.0.32",
+  "description": "Создаёт заявки в лид-центрах из очереди лид-бота вашими рабочими сессиями. Работает только на офисном ПК.",
+  "permissions": [
+    "alarms",
+    "storage",
+    "offscreen",
+    "notifications",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://bt-lead-centre.ru/*",
+    "https://kp-lead-centre.ru/*",
+    "https://mnc-lead-centre.ru/*",
+    "https://72-56-68-159.sslip.io/*",
+    "https://188-225-34-82.sslip.io/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Очередь заявок лид-бота"
+  },
+  "options_page": "options.html",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

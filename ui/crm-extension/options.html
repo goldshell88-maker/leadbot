@@ -1,0 +1,76 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Настройки — Лид-бот → Заявки</title>
+<style>
+  :root { color-scheme: dark; }
+  body { max-width: 620px; margin: 24px auto; background: #14161c; color: #e6e8ee;
+         font: 14px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; padding: 0 16px; }
+  h1 { font-size: 18px; }
+  label { display: block; margin: 14px 0 4px; color: #9aa3b5; font-size: 12px; }
+  input[type=text], input[type=password], input[type=number], select {
+    width: 100%; box-sizing: border-box; background: #1b1f2a; color: #e6e8ee;
+    border: 1px solid #323848; border-radius: 8px; padding: 8px 10px; font: inherit; }
+  .row { display: flex; gap: 14px; align-items: center; margin-top: 10px; }
+  button { background: #3457d5; color: #fff; border: 0; border-radius: 8px;
+           padding: 9px 16px; font: inherit; cursor: pointer; }
+  button.ghost { background: #232735; border: 1px solid #323848; }
+  .hint { color: #7d8698; font-size: 12px; margin-top: 4px; }
+  .ok { color: #34d399; } .bad { color: #f87171; }
+  fieldset { border: 1px solid #262a34; border-radius: 10px; margin-top: 16px; padding: 10px 14px; }
+  legend { color: #9aa3b5; font-size: 12px; padding: 0 6px; }
+</style>
+<h1>Лид-бот → Заявки</h1>
+<p class="hint">Расширение живёт на офисном ПК: забирает готовые лиды у бота и создаёт
+заявки в лид-центрах вашими рабочими сессиями. Если сессия в CRM истекла — просто
+войдите на сайт лид-центра, как обычно.</p>
+
+<label>Адрес бота</label>
+<input type="text" id="botUrl" placeholder="https://72-56-68-159.sslip.io">
+<label>Токен расширения</label>
+<input type="password" id="token" placeholder="crm.extension_token из config.json бота">
+<div class="hint">Взять на сервере: <code>grep extension_token /opt/leadbot/config.json</code></div>
+
+<fieldset>
+  <legend>Режим</legend>
+  <div class="row">
+    <label style="margin:0"><input type="radio" name="mode" value="manual"> Вручную —
+      я нажимаю «Создать» в списке</label>
+  </div>
+  <div class="row">
+    <label style="margin:0"><input type="radio" name="mode" value="auto"> Автоматически —
+      расширение создаёт само, как только лид появился</label>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Направления</legend>
+  <div class="row">
+    <label style="margin:0"><input type="checkbox" id="d-kp"> КП</label>
+    <label style="margin:0"><input type="checkbox" id="d-bt"> БТ</label>
+    <label style="margin:0"><input type="checkbox" id="d-mnc"> МНЧ</label>
+  </div>
+</fieldset>
+
+<label>Интервал опроса, секунд (минимум 30)</label>
+<input type="number" id="intervalSec" min="30" step="10">
+
+<fieldset>
+  <legend>Слежение за ботом</legend>
+  <label>Адрес LeadChat</label>
+  <input type="text" id="leadchatUrl" placeholder="https://188-225-34-82.sslip.io">
+  <div class="row" style="margin-top:8px">
+    <label style="margin:0"><input type="checkbox" id="followBot"> Автоматически держать
+      вкладку на диалоге, который ведёт бот (проверка раз в минуту)</label>
+  </div>
+  <div style="color:#7d8698;font-size:12px;margin-top:6px">
+    Нужен вход в LeadChat в этом же браузере: расширение берёт вашу сессию, ничего не
+    хранит. Кнопка «👁 Бот» в попапе открывает диалог разово и без этой галочки.
+  </div>
+</fieldset>
+
+<div class="row" style="margin-top:18px">
+  <button id="save">Сохранить</button>
+  <button id="test" class="ghost">Проверить связь</button>
+  <span id="msg"></span>
+</div>
+<script src="options.js"></script>

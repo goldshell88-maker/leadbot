@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Лид-бот — пульт оператора</title>
+<style>
+  :root { --bg:#0f1216; --panel:#171c22; --panel2:#1d242c; --line:#262d36; --text:#e6eaef;
+          --muted:#8b96a3; --cl:#232b34; --bot:#2f7d5b; --accent:#2b6cb0; --warn:#c9932b; --live:#e0533d; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:13.5px/1.45 system-ui,Segoe UI,Arial; background:var(--bg); color:var(--text);
+         display:grid; grid-template-columns:190px 1fr 250px; height:100vh; }
+  .col { display:flex; flex-direction:column; min-height:0; }
+  .muted{color:var(--muted);} .mini{font-size:12px;}
+  button { padding:7px 11px; border:0; border-radius:9px; background:var(--accent); color:#fff; cursor:pointer; font-size:13px; }
+  button.ghost { background:var(--panel2); border:1px solid var(--line); color:var(--text); }
+  button.copy { background:var(--bot); padding:3px 9px; font-size:11.5px; border-radius:7px; }
+  button:disabled{opacity:.5;cursor:default;}
+
+  /* список чатов */
+  .side { border-right:1px solid var(--line); background:var(--panel); }
+  .side .top { padding:10px; border-bottom:1px solid var(--line); }
+  .side .top button { width:100%; }
+  #chats { overflow-y:auto; flex:1; }
+  .ci { padding:9px 11px; border-bottom:1px solid var(--line); cursor:pointer; display:flex; gap:6px; align-items:center; }
+  .ci:hover{background:var(--panel2);} .ci.sel{background:var(--panel2); border-left:3px solid var(--accent);}
+  .ci .nm{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ci .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
+  .ci .dot.ok{background:var(--bot);} .ci .dot.wait{background:var(--warn);}
+  .ci .x{color:var(--muted); font-size:14px; padding:0 3px;}
+
+  /* центр */
+  header { padding:8px 12px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  header b{font-size:14px;} .sp{flex:1;}
+  .ctx { display:flex; gap:6px; padding:7px 12px; border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
+  .ctx input, .ctx select { padding:5px 8px; border-radius:8px; border:1px solid var(--line); background:var(--panel2); color:var(--text); font-size:12px; }
+  .ctx input{width:110px;}
+  #chat { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:9px; }
+  .msg { max-width:84%; padding:8px 12px; border-radius:12px; white-space:pre-wrap; word-wrap:break-word; }
+  .client { align-self:flex-start; background:var(--cl); border-bottom-left-radius:3px; }
+  .bot { align-self:flex-end; background:var(--bot); border-bottom-right-radius:3px; }
+  .bot.deflect { background:#5a2b24; }
+  .msg .who { font-size:10px; opacity:.75; margin-bottom:3px; display:flex; justify-content:space-between; gap:10px; align-items:center; }
+  .sys { align-self:center; color:var(--muted); font-size:12px; text-align:center; max-width:92%; }
+  form { display:flex; gap:8px; padding:11px 12px; border-top:1px solid var(--line); }
+  textarea { flex:1; padding:9px 12px; border-radius:10px; border:1px solid var(--line); background:var(--panel); color:var(--text); resize:none; font:inherit; height:44px; }
+
+  aside { border-left:1px solid var(--line); background:var(--panel); padding:13px; overflow-y:auto; }
+  aside h3 { margin:0 0 10px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .fld { display:flex; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px solid var(--line); }
+  .fld .k{color:var(--muted);} .fld.empty .v{color:var(--warn);}
+  .badge { display:inline-block; padding:3px 9px; border-radius:20px; font-size:12px; margin-top:10px; }
+  .badge.ok{background:rgba(47,125,91,.2);color:#8fe0b6;} .badge.wait{background:rgba(201,147,43,.18);color:#e6c07b;}
+  .hint{color:var(--muted);font-size:11px;margin-top:12px;}
+</style>
+</head>
+<body>
+  <div class="col side">
+    <div class="top"><button id="newchat">+ Новый чат</button></div>
+    <div id="chats"></div>
+  </div>
+
+  <div class="col">
+    <header>
+      <b>Пульт оператора</b>
+      <span class="mini muted">несколько клиентов сразу · бот отвечает за вас</span>
+      <span class="sp"></span>
+      <span class="mini muted" id="model"></span>
+    </header>
+    <div class="ctx">
+      <span class="mini muted" style="align-self:center">Контекст:</span>
+      <input id="cx-name" placeholder="Имя">
+      <input id="cx-city" placeholder="Город">
+      <select id="cx-dir">
+        <option value="">направление: авто</option>
+        <option value="bt">БТ (техника)</option>
+        <option value="kp">КП (компьютеры)</option>
+        <option value="mnc">МНЧ (мелкий ремонт)</option>
+      </select>
+      <select id="cx-acc" title="Аккаунт — разные аккаунты отвечают в своей манере, чтобы клиент, пишущий на несколько, видел разных мастеров">
+        <option value="">аккаунт: —</option>
+        <option value="p1">Аккаунт 1 · тёплый</option>
+        <option value="p2">Аккаунт 2 · деловой</option>
+        <option value="p3">Аккаунт 3 · простой</option>
+        <option value="p4">Аккаунт 4 · спокойный</option>
+        <option value="p5">Аккаунт 5 · бодрый</option>
+        <option value="p6">Аккаунт 6 · сдержанный</option>
+        <option value="p7">Аккаунт 7 · лёгкий</option>
+        <option value="p8">Аккаунт 8 · деликатный</option>
+        <option value="p9">Аккаунт 9 · краткий</option>
+        <option value="p10">Аккаунт 10 · душевный</option>
+      </select>
+      <label class="mini muted" style="align-self:center;display:flex;gap:4px;align-items:center;cursor:pointer"
+             title="Партнёр 723 («белый» аккаунт): от вопроса цены не уводим, называем прямые суммы — включает блок правил 723">
+        <input type="checkbox" id="cx-white"> белый 723</label>
+    </div>
+    <div id="chat"></div>
+    <form id="f">
+      <textarea id="t" placeholder="Вставь сообщение клиента и нажми «Ответить» (Ctrl+Enter)"></textarea>
+      <button id="send">Ответить</button>
+    </form>
+  </div>
+
+  <aside>
+    <h3>Черновик заявки</h3>
+    <div id="cat" class="fld"><span class="k">Направление</span><span class="v">—</span></div>
+    <div id="fields"></div>
+    <div id="readybox"><span class="badge wait">собираем…</span></div>
+    <div class="hint">Ответ понравился → «Копировать» и вставь клиенту в Jivo. Когда собраны телефон+адрес+время — бот останавливается, заявку ведёт оператор.</div>
+    <div class="hint" id="usage"></div>
+  </aside>
+
+<script>
+const CAT={bt:"БТ · бытовая техника",kp:"КП · компьютерная помощь",mnc:"МНЧ · муж на час",unknown:"— (уточняется)"};
+const FIELDS=[["city","Город"],["phone","Телефон"],["address","Адрес"],["service","Вид работ"],["preferred_time","Время"]];
+const $=s=>document.querySelector(s);
+function esc(t){const d=document.createElement('div');d.textContent=t||'';return d.innerHTML;}
+
+let chats=[], activeLid=null, seq=1;
+function save(){ try{ localStorage.setItem('relayChats', JSON.stringify({chats,seq})); }catch(e){} }
+function load(){ try{ const o=JSON.parse(localStorage.getItem('relayChats')||'{}'); if(o.chats){chats=o.chats; seq=o.seq||chats.length+1;} }catch(e){} }
+function active(){ return chats.find(c=>c.lid===activeLid); }
+function labelOf(c){ if(c.ctx&&c.ctx.name) return c.ctx.name; const fc=(c.msgs||[]).find(m=>m.role==='client'); return fc?fc.text.slice(0,20):'Новый чат'; }
+
+function newChat(){ const lid=seq++; const c={lid, did:null, ctx:{name:'',city:'',dir:'',persona:PERSONAS[(lid-1)%PERSONAS.length]}, msgs:[], state:{category:'unknown'}, missing:['category','city','phone','address','service','preferred_time'], ready:false, done:false, closed:false}; chats.unshift(c); activeLid=c.lid; save(); renderAll(); }
+function delChat(lid,ev){ ev.stopPropagation(); chats=chats.filter(c=>c.lid!==lid); if(activeLid===lid) activeLid=chats.length?chats[0].lid:null; if(!chats.length) newChat(); save(); renderAll(); }
+function switchTo(lid){ activeLid=lid; renderAll(); }
+
+function renderList(){
+  $('#chats').innerHTML = chats.map(c=>{
+    const dot = c.closed?'ok':(c.msgs&&c.msgs.length?'wait':'');
+    return `<div class="ci ${c.lid===activeLid?'sel':''}" data-l="${c.lid}">
+      ${dot?'<span class="dot '+dot+'"></span>':'<span style="width:8px"></span>'}
+      <span class="nm">${esc(labelOf(c))}</span><span class="x" data-del="${c.lid}">✕</span></div>`;
+  }).join('');
+  document.querySelectorAll('.ci').forEach(el=>el.onclick=()=>switchTo(+el.dataset.l));
+  document.querySelectorAll('.x').forEach(el=>el.onclick=(e)=>delChat(+el.dataset.del,e));
+}
+function bubbleEl(m){
+  if(m.role==='bot'){
+    // бот шлёт ОЧЕРЕДЬ пузырей (перенос строки = отдельное сообщение, как пишут операторы)
+    const frag=document.createDocumentFragment();
+    const parts=(m.text||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    parts.forEach((p,i)=>{
+      const d=document.createElement('div'); d.className='msg bot'+(m.deflect?' deflect':'');
+      const w=document.createElement('div'); w.className='who';
+      w.innerHTML='<span>Бот (за вас)'+(parts.length>1?(' · '+(i+1)+'/'+parts.length):'')+'</span>';
+      const b=document.createElement('button'); b.className='copy'; b.textContent='Копировать';
+      b.onclick=async()=>{ try{await navigator.clipboard.writeText(p); b.textContent='Скопировано ✓'; setTimeout(()=>b.textContent='Копировать',1200);}catch(e){b.textContent='—';} };
+      w.appendChild(b); d.appendChild(w); d.appendChild(document.createTextNode(p));
+      if(m.timing && i===parts.length-1){ const t=document.createElement('div'); t.style.cssText='margin-top:6px;font-size:11px;opacity:.75';
+        t.textContent='⏱ по-человечески: подождать ~'+m.timing.wait_before_s+' с'
+          +(m.timing.maybe_client_typing?' (клиент, похоже, дописывает!)':'')
+          +', набор ~'+((m.timing.total_s||0)-(m.timing.wait_before_s||0))+' с'
+          +(parts.length>1?', слать по очереди с паузой 3-9 с':'');
+        d.appendChild(t); }
+      frag.appendChild(d);
+    });
+    return frag;
+  }
+  const d=document.createElement('div');
+  if(m.role==='client'){ d.className='msg client'; const w=document.createElement('div'); w.className='who'; w.innerHTML='<span>Клиент</span>'; d.appendChild(w); d.appendChild(document.createTextNode(m.text)); }
+  else { d.className='msg sys'; d.textContent=m.text; }
+  return d;
+}
+function renderChat(){
+  const c=active(); const box=$('#chat'); box.innerHTML='';
+  if(!c){ return; }
+  if(!c.msgs.length){ const s=document.createElement('div'); s.className='msg sys'; s.textContent='Вставь первое сообщение клиента.'; box.appendChild(s); }
+  c.msgs.forEach(m=>box.appendChild(bubbleEl(m)));
+  box.scrollTop=box.scrollHeight;
+  // контекст
+  $('#cx-name').value=c.ctx.name||''; $('#cx-city').value=c.ctx.city||''; $('#cx-dir').value=c.ctx.dir||''; $('#cx-acc').value=c.ctx.persona||''; $('#cx-white').checked=!!c.ctx.white;
+  $('#t').disabled=c.closed; $('#send').disabled=c.closed;
+  $('#t').placeholder=c.closed?'Заявка оформлена — открой новый чат':'Вставь сообщение клиента и нажми «Ответить» (Ctrl+Enter)';
+}
+function renderState(){
+  const c=active(); const s=(c&&c.state)||{category:'unknown'};
+  $('#cat .v').textContent=CAT[s.category]||s.category||'—';
+  const box=$('#fields'); box.innerHTML='';
+  for(const [key,label] of FIELDS){ const v=s[key]||''; const row=document.createElement('div'); row.className='fld'+(v?'':' empty'); row.innerHTML='<span class="k">'+label+'</span><span class="v">'+esc(v||'—')+'</span>'; box.appendChild(row); }
+  const missing=(c&&c.missing)||[]; const ready=c&&c.ready;
+  $('#readybox').innerHTML = (c&&c.closed)?'<span class="badge ok">✓ заявка готова — ведёт оператор</span>'
+    : ready?'<span class="badge ok">✓ данные собраны</span>'
+    :'<span class="badge wait">не хватает: '+(missing.map(m=>({category:"направление",city:"город",phone:"телефон",address:"адрес",service:"вид работ",preferred_time:"время"}[m]||m)).join(', ')||'—')+'</span>';
+}
+function renderAll(){ renderList(); renderChat(); renderState(); }
+
+function knownOf(ctx){ const k={}; if(ctx.name)k.visitor=ctx.name; if(ctx.city)k.city=ctx.city; if(ctx.dir)k.direction=ctx.dir; if(ctx.persona)k.persona=ctx.persona; if(ctx.white){k.white=true;k.partner='723';} return k; }
+const PERSONAS=['p1','p2','p3','p4','p5','p6','p7','p8','p9','p10'];
+
+async function send(text){
+  const c=active(); if(!c||c.closed) return;
+  c.msgs.push({role:'client',text}); renderChat(); renderList(); save();
+  const wait=document.createElement('div'); wait.className='msg bot'; wait.textContent='…'; $('#chat').appendChild(wait); $('#chat').scrollTop=$('#chat').scrollHeight;
+  try{
+    // шлём ВСЮ историю чата — сервер не хранит контекст, он не теряется при перезапуске
+    const hist=c.msgs.filter(m=>m.role==='client'||m.role==='bot').map(m=>({role:m.role,text:m.text}));
+    const r=await fetch('/api/message',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({messages:hist, known:knownOf(c.ctx)})});
+    const j=await r.json(); wait.remove();
+    if(!r.ok){ c.msgs.push({role:'sys',text:'⚠ '+(j.error||'ошибка')+((j.error||'').includes('402')?' — пополни баланс шлюза':'')}); renderChat(); save(); return; }
+    if(j.to_operator){ c.msgs.push({role:'sys',text:'📨 '+(j.note||'Нестандартный вопрос — передан оператору, без ответа клиенту.')}); if(j.state)c.state=j.state; renderAll(); save(); return; }
+    c.msgs.push({role:'bot',text:j.reply,deflect:j.deflect,timing:j.timing});
+    if(j.deflect) c.msgs.push({role:'sys',text:'⚑ '+(j.flag?j.flag.reason:'слив/отказ')+' — локально, без API'});
+    c.state=j.state; c.missing=j.missing; c.ready=j.ready; c.done=j.done;
+    if(j.done){ c.closed=true; c.msgs.push({role:'sys',text:'✓ Телефон, адрес и время собраны. Бот остановлен — заявку ведёт оператор.'}); }
+    $('#model').textContent=j.model?('модель: '+j.model.replace('claude-','')):'';
+    if(j.usage) $('#usage').textContent='токены: '+(j.usage.input_tokens||0)+'/'+(j.usage.output_tokens||0)+(j.usage.cache_read_input_tokens?' · кэш '+j.usage.cache_read_input_tokens:''); else $('#usage').textContent='0 токенов (фильтр)';
+    renderAll(); save();
+  }catch(e){ wait.remove(); c.msgs.push({role:'sys',text:'⚠ нет связи с сервисом'}); renderChat(); save(); }
+}
+
+$('#f').addEventListener('submit',e=>{ e.preventDefault(); const t=$('#t'); const v=t.value.trim(); if(!v)return; t.value=''; send(v); });
+$('#t').addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key==='Enter'){e.preventDefault(); $('#f').requestSubmit();} });
+$('#newchat').addEventListener('click',newChat);
+for(const [id,key] of [['cx-name','name'],['cx-city','city'],['cx-dir','dir'],['cx-acc','persona']]){
+  $('#'+id).addEventListener('change',()=>{ const c=active(); if(c){ c.ctx[key]=$('#'+id).value.trim?$('#'+id).value.trim():$('#'+id).value; save(); renderList(); } });
+}
+$('#cx-white').addEventListener('change',()=>{ const c=active(); if(c){ c.ctx.white=$('#cx-white').checked; save(); renderList(); } });
+
+load(); if(!chats.length) newChat(); else activeLid=chats[0].lid; renderAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+#!/bin/sh
+# Пре-коммит: быстрые юниты (0 токенов к API). Медленные (test_hardcore, приём) — руками.
+# Интерпретатор ищем по машинам: Windows (старый ПК) → python3 в PATH (Mac/Linux/VPS).
+PY="$HOME/AppData/Local/Python/pythoncore-3.14-64/python.exe"
+if [ ! -x "$PY" ]; then
+  # ⚠ 21.08: на машине владельца python3 перехвачен шимом окружения и отказывается
+  # стартовать («Use `uv run python …`») — хук падал на любом коммите, хотя тесты
+  # зелёные. uv, если он есть, запускает те же файлы обычным питоном.
+  if command -v uv >/dev/null 2>&1; then
+    PY="uv run python"
+  else
+    PY="$(command -v python3 || command -v python)"
+  fi
+fi
+cd "$(git rev-parse --show-toplevel)" || exit 1
+export PYTHONIOENCODING=utf-8
+for t in analysis/test_router_guards.py analysis/test_callouts.py analysis/test_junk.py analysis/test_leadchat.py analysis/test_escalation.py analysis/test_boundaries.py; do
+  if ! $PY "$t" >/dev/null 2>&1; then
+    echo "ПРОВАЛ: $t — коммит отменён. Запусти для деталей:"
+    echo "  $PY $t"
+    exit 1
+  fi
+done
+echo "pre-commit: юниты зелёные"
